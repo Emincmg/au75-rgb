@@ -142,7 +142,12 @@ async function access(cmd, sub, length, data) {
     if (!data) {
       const dv = await dev.receiveFeatureReport(RID);
       const buf = new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength);
-      const off = buf.length >= PKT ? 8 : 7;     // some platforms include the report id byte
+      // The reply echoes the header. Chrome may or may not include the report ID byte,
+      // and the device sends only header + data (e.g. 136 bytes), so find the cmd echo.
+      let off;
+      if (buf[0] === RID && buf[1] === cmd) off = 8;
+      else if (buf[0] === cmd) off = 7;
+      else throw new Error("Beklenmeyen cevap: " + Array.from(buf.subarray(0, 8), x => x.toString(16).padStart(2, "0")).join(" "));
       out.set(buf.subarray(off, off + len), i * 0x200);
     }
   }

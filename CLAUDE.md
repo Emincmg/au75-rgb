@@ -5,7 +5,7 @@ macOS command-line tool for the lighting of the AULA AU75 3-in-1 keyboard. AULA 
 ## Layout
 - `au75.py`: the whole tool (Python 3 + `hidapi`).
 - `au75`: shell launcher that runs `au75.py` with the local `.venv`.
-- `index.html`: WebHID web arayüzü (GitHub Pages: https://emincmg.github.io/au75-rgb/). Protokolün aynısı: `sendFeatureReport(6, ...)` / `receiveFeatureReport(6)`. Chrome bazı platformlarda dönen DataView'a report ID baytını ekliyor, kod uzunluğa bakıp bunu ayırt ediyor.
+- `index.html`: WebHID web arayüzü (GitHub Pages: https://emincmg.github.io/au75-rgb/). Protokolün aynısı: `sendFeatureReport(6, ...)` / `receiveFeatureReport(6)`. The device replies with only header + data (e.g. 136 bytes for the LED block), and Chrome may or may not prepend the report ID, so the JS finds the data offset from the echoed cmd byte.
 - `led_backup.bin`: the 128-byte LED block read from the user's keyboard before the first write (factory-ish state, side light ON, mode 1). `./au75 restore` writes it back.
 
 Setup: `python3 -m venv .venv && .venv/bin/pip install hidapi`

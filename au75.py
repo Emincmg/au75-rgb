@@ -94,5 +94,19 @@ if __name__ == "__main__":
             b[SIDE[a[1]]] = int(a[2], 0)
         write_led(h, rid, b)
         hexdump(read_led(h, rid)[0x10:0x20])
+    elif a[0] == "watch":
+        secs = float(a[1]) if len(a) > 1 else 60
+        prev = read_led(h, rid); t0 = time.time()
+        print("izleniyor...", flush=True)
+        while time.time() - t0 < secs:
+            time.sleep(0.4)
+            try:
+                cur = read_led(h, rid)
+            except SystemExit:
+                continue
+            diff = [f"{i:#04x}:{prev[i]:02x}->{cur[i]:02x}" for i in range(LED_LEN) if prev[i] != cur[i]]
+            if diff:
+                print(f"[{time.time()-t0:6.1f}s] " + "  ".join(diff), flush=True)
+                prev = cur
     else:
         sys.exit(USAGE)
