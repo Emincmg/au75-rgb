@@ -9,6 +9,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)  # the launcher runs python -I, which drops the script dir
 import hid
 import keymap as km
+import macro as mc
 
 VID, PID = 0x258a, 0x010C
 PKT = 0x208
@@ -85,6 +86,16 @@ EFFECTS = {  # id -> name (driver text.xml / KB.ini LedOpt)
 EFFECT_ORDER = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 21]
 COLORS = ["kırmızı", "yeşil", "mavi", "sarı", "mor", "turkuaz", "beyaz", "renkli"]
 MAIN_EFFECT, MAIN_GROUP, MAIN_FLAG, PAIRS = 0x0a, 0x0b, 0x09, 0x3a
+SLEEP, DEBOUNCE = 0x18, 0x03
+SLEEP_CHOICES = [30, 60, 90, 120, 180, 240, 300, 600, 900, 1200]  # seconds; stored as seconds/30, 0 = never
+
+
+def settings_state(b):
+    sl = b[SLEEP]
+    sleep = "hiç" if sl == 0 else (f"{sl*30} sn" if sl * 30 < 60 else f"{sl*30/60:g} dk")
+    return f"uyku: {sleep}   debounce: {b[DEBOUNCE]}"
+
+
 SIDE = {"mode": 0x12, "color": 0x13, "light": 0x14, "speed": 0x15}
 
 
@@ -160,6 +171,19 @@ Tuş atama  (--fn: Fn katmanı)
   unmap [--fn] <tuş> [...]     tuşu fabrika atamasına döndür
   keymap reset                 tüm tuş haritasını fabrika ayarına döndür
   targets                      kullanılabilir hedef adları
+
+Ayarlar
+  settings                     uyku süresi ve debounce
+  sleep <saniye|never>         uyku süresi: 30 60 90 120 180 240 300 600 900 1200 ya da never
+  debounce <1-4>               tuş titreşim filtresi (yüksek = daha uzun)
+
+Makro  (adımlar: tap:<tuş> down:<tuş> up:<tuş> text:<yazı> wait:<ms> click:left|right|middle)
+  macros                       kayıtlı makroları listele
+  macro set <no> <ad> <adım> [<adım> ...]   makro yaz (no: 1-32)
+        örnek: au75 macro set 1 kopyala tap:cmd+c
+               au75 macro set 2 imza "text:Selamlar, Emin" tap:enter
+  macro del <no>               makroyu sil (sonrakiler bir kayar, atamalar düzeltilir)
+  map <tuş> macro:<no>[:once|toggle|hold[:tekrar]]   tuşa makro ata
 
 Diğer
   info                         HID arayüzlerini listele
@@ -244,6 +268,61 @@ def main(a):
                 sys.exit(str(e))
             print(f"{name} -> {km.decode(bytes(m[i*4:i*4+4]))}" + (" (Fn)" if fn else ""))
         write_matrix(h, rid, layer, m)
+        print("yazıldı ✓")
+    elif cmd in ("settings", "sleep", "debounce"):
+        b = read_led(h, rid)
+        if cmd == "sleep":
+            if a[1] in ("never", "0", "hiç"): b[SLEEP] = 0
+            else:
+                sec = int(a[1])
+                if sec not in SLEEP_CHOICES: sys.exit(f"seçenekler: {' '.join(map(str, SLEEP_CHOICES))} ya da never")
+                b[SLEEP] = sec // 30
+            write_led(h, rid, b)
+        elif cmd == "debounce":
+            v = int(a[1])
+            if not 1 <= v <= 4: sys.exit("debounce 1-4 arası olmalı")
+            b[DEBOUNCE] = v
+            write_led(h, rid, b)
+        print(settings_state(read_led(h, rid)))
+    elif cmd == "macros":
+        ms = mc.unpack(access(h, rid, 0x85, 0, mc.MACRO_BUF))
+        if not ms: print("kayıtlı makro yok")
+        for i, (name, ev) in enumerate(ms, 1):
+            print(f"{i:2}. {name}: {mc.describe(ev)}")
+    elif cmd == "macro":
+        ms = mc.unpack(access(h, rid, 0x85, 0, mc.MACRO_BUF))
+        try:
+            if a[1] == "set":
+                no, name, steps = int(a[2]), a[3], a[4:]
+                if not 1 <= no <= len(ms) + 1:
+                    sys.exit(f"makro no 1 ile {len(ms) + 1} arasında olmalı")
+                item = (name, mc.compile_steps(steps))
+                if no <= len(ms): ms[no - 1] = item
+                else: ms.append(item)
+            elif a[1] == "del":
+                no = int(a[2])
+                if not 1 <= no <= len(ms): sys.exit("böyle bir makro yok")
+                del ms[no - 1]
+                # fix key assignments: drop ones pointing at the deleted macro, shift later ones
+                for l in (0, 1):
+                    m = read_matrix(h, rid, l); f = factory_matrix(l); changed = False
+                    for i in range(0, km.MATRIX_LEN - 4, 4):
+                        e = m[i:i+4]
+                        if e[0] == 0x03 and e[1] in (1, 2, 4):
+                            if e[3] == no - 1: m[i:i+4] = f[i:i+4]; changed = True
+                            elif e[3] > no - 1: m[i+3] -= 1; changed = True
+                    if changed: write_matrix(h, rid, l, m)
+            else:
+                sys.exit(USAGE)
+            buf = mc.pack(ms)
+        except ValueError as e:
+            sys.exit(str(e))
+        data = buf + bytes(mc.MACRO_BUF - len(buf))
+        access(h, rid, 0x05, 0, mc.MACRO_BUF, data)
+        if access(h, rid, 0x85, 0, mc.MACRO_BUF) != data:
+            sys.exit("Makro yazma doğrulanamadı!")
+        for i, (name, ev) in enumerate(mc.unpack(data), 1):
+            print(f"{i:2}. {name}: {mc.describe(ev)}")
         print("yazıldı ✓")
     elif cmd == "watch":
         secs = float(a[1]) if len(a) > 1 else 60

@@ -40,7 +40,7 @@ MEDIA = {"play": 0xcd, "playpause": 0xcd, "next": 0xb5, "prev": 0xb6, "previous"
 SPECIAL = {
     "07000001": "win-kilidi", "07000004": "fabrika-ayarı", "07000005": "bt1", "07000006": "bt2",
     "07000007": "bt3", "07000008": "2.4g", "0700000a": "oyun-modu?", "0700000e": "windows-modu",
-    "0700000f": "mac-modu", "07000016": "android-modu", "07000011": "pil-göstergesi",
+    "0700000f": "mac-modu", "07000016": "android-modu", "07000011": "pil-göstergesi",  # Fn+B: F1-F10 light up, ~10% each (confirmed)
     "07000013": "07000013?", "07000014": "düğme-basma",
     "03000000": "düğme-sola", "03000001": "düğme-sağa",
     "08000000": "ışık-efekt", "08000001": "kenar-ışık-efekt?", "08020000": "ışık-renk?",
@@ -73,6 +73,14 @@ def encode(spec):
         if k is None:
             raise ValueError(f"bilinmeyen özel fonksiyon: {s[3:]} ({', '.join(SPECIAL_BY_NAME)})")
         return bytes.fromhex(k)
+    if s.startswith("macro:"):
+        # macro:<no>[:once|toggle|hold[:repeat]]  (no is 1-based)
+        parts = s.split(":")[1:]
+        no = int(parts[0]); mode = parts[1] if len(parts) > 1 else "once"
+        rep = int(parts[2]) if len(parts) > 2 else 1
+        m = {"once": 1, "toggle": 2, "hold": 4}.get(mode)
+        if m is None or not 1 <= no <= 32: raise ValueError("macro:<1-32>[:once|toggle|hold[:tekrar]]")
+        return bytes([0x03, m, (rep if m == 1 else 1) & 0xff, no - 1])
     if s.startswith("raw:"):
         b = bytes.fromhex(s[4:])
         if len(b) != 4: raise ValueError("raw: 8 hex karakter olmalı")
@@ -100,4 +108,7 @@ def decode(e):
         u = (e[2] << 8) | e[3]
         return "media:" + _MEDIA_NAME.get(u, f"{u:#06x}")
     if e.hex() in SPECIAL: return "fn:" + SPECIAL[e.hex()]
+    if t == 0x03 and e[1] in (1, 2, 4):
+        mode = {1: "once", 2: "toggle", 4: "hold"}[e[1]]
+        return f"macro:{e[3] + 1}:{mode}" + (f":{e[2]}" if e[1] == 1 and e[2] != 1 else "")
     return f"raw:{e.hex()}"

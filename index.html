@@ -3,40 +3,43 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AU75 Işık Kontrolü</title>
+<title>AU75 Kontrol</title>
 <style>
   :root {
     --bg: #f5f5f4; --card: #ffffff; --text: #1c1917; --muted: #78716c;
     --line: #e7e5e4; --accent: #0a93ff; --accent-text: #ffffff;
     --ok: #15803d; --err: #b91c1c; --code: #f5f5f4;
+    --key: #fafaf9; --key-line: #d6d3d1; --key-mod: #fff4d6; --key-sel: #0a93ff;
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #161616; --card: #212121; --text: #ededed; --muted: #9a9a9a;
       --line: #333333; --accent: #3aa8ff; --accent-text: #0b0b0b;
       --ok: #4ade80; --err: #f87171; --code: #1a1a1a;
+      --key: #2b2b2b; --key-line: #3d3d3d; --key-mod: #4a3f1c; --key-sel: #3aa8ff;
     }
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--text);
     font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  main { max-width: 640px; margin: 0 auto; padding: 32px 16px 64px; }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
   h1 { font-size: 24px; margin: 0 0 4px; }
-  .sub { color: var(--muted); margin: 0 0 24px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
     padding: 20px; margin-bottom: 16px; }
   .card h2 { font-size: 16px; margin: 0 0 12px; }
+  .card h3 { font-size: 14px; margin: 16px 0 4px; color: var(--muted); font-weight: 600; }
   .row { display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    padding: 10px 0; border-top: 1px solid var(--line); }
-  .row:first-of-type { border-top: 0; }
-  .row label { font-weight: 500; }
-  .row small { display: block; color: var(--muted); font-weight: 400; }
+    padding: 10px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+  .row:first-of-type, h3 + .row { border-top: 0; }
+  .row > label:first-child { font-weight: 500; }
   button { font: inherit; border: 1px solid var(--line); background: var(--card); color: var(--text);
-    padding: 8px 14px; border-radius: 8px; cursor: pointer; }
+    padding: 7px 13px; border-radius: 8px; cursor: pointer; }
   button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
   button:disabled { opacity: .45; cursor: not-allowed; }
-  select, input[type=range] { font: inherit; }
-  select { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--text); }
+  select, input[type=text], input[type=number], textarea { font: inherit; padding: 6px 8px; border-radius: 8px;
+    border: 1px solid var(--line); background: var(--card); color: var(--text); }
+  textarea { width: 100%; font: 13px/1.5 ui-monospace, Menlo, monospace; }
   input[type=range] { width: 160px; accent-color: var(--accent); }
   .switch { position: relative; width: 48px; height: 28px; flex: none; }
   .switch input { opacity: 0; width: 0; height: 0; }
@@ -47,112 +50,193 @@
   .switch input:checked + span::before { transform: translateX(20px); }
   .status { font-size: 14px; color: var(--muted); margin-top: 12px; min-height: 1.5em; }
   .status.ok { color: var(--ok); } .status.err { color: var(--err); }
-  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   pre { background: var(--code); border: 1px solid var(--line); border-radius: 8px; padding: 12px;
     font: 12px/1.5 ui-monospace, Menlo, monospace; overflow-x: auto; margin: 12px 0 0; }
   .tag { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
     color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; margin-left: 6px; }
   .note { color: var(--muted); font-size: 14px; }
+  code { font: 13px ui-monospace, Menlo, monospace; }
   [hidden] { display: none !important; }
+
+  .tabs { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tabs button { border-radius: 999px; }
+  .tabs button[aria-selected=true] { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+  .kb-wrap { overflow-x: auto; margin: 0 -4px; padding: 4px; }
+  .kb { position: relative; width: 100%; min-width: 560px; aspect-ratio: 600 / 240; }
+  .key { position: absolute; border: 1px solid var(--key-line); background: var(--key); border-radius: 6px;
+    font: 10px/1.15 -apple-system, sans-serif; color: var(--text); padding: 3px; overflow: hidden;
+    cursor: pointer; text-align: left; display: flex; flex-direction: column; justify-content: space-between; }
+  .key .n { color: var(--muted); font-size: 9px; }
+  .key .t { font-weight: 600; word-break: break-all; }
+  .key.changed { background: var(--key-mod); }
+  .key.sel { outline: 2px solid var(--key-sel); outline-offset: 1px; }
+  .editor { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chips button { padding: 3px 9px; font-size: 13px; border-radius: 999px; }
+  .macro-item { border-top: 1px solid var(--line); padding: 10px 0; }
+  .macro-item:first-child { border-top: 0; }
+  .macro-item b { margin-right: 8px; }
+  .macro-item .ev { font: 12px ui-monospace, Menlo, monospace; color: var(--muted); word-break: break-word; }
 </style>
 </head>
 <body>
 <main>
-  <h1>AU75 Işık Kontrolü</h1>
-  <p class="sub">AULA AU75 klavyenin ışıklarını tarayıcıdan ayarla. Kurulum gerekmez.</p>
+  <h1>AU75 Kontrol</h1>
+  <p class="sub">AULA AU75 için ışık, tuş atama, makro ve ayarlar. Tarayıcıdan çalışır, kurulum gerekmez.</p>
 
-  <div class="card" id="connectCard">
+  <div class="card">
     <h2>Bağlantı</h2>
-    <p class="note" id="support">Klavyeyi <b>USB kabloyla</b> bağla, sonra aşağıdaki butona bas ve listeden klavyeyi seç.
-      Ayarlar klavyenin hafızasına yazılır, kablosuz kullanınca da kalır.</p>
-    <div class="actions">
-      <button class="primary" id="connectBtn">Klavyeye bağlan</button>
-    </div>
+    <p class="note">Klavyeyi <b>USB kabloyla</b> bağla, butona bas ve listeden klavyeyi seç (Chrome, Edge ya da Opera).
+      Ayarlar klavyenin hafızasına yazılır, kablosuz kullanınca da kalır. Komut satırı aracı açıkken bağlanamazsın.</p>
+    <div class="actions"><button class="primary" id="connectBtn">Klavyeye bağlan</button></div>
     <div class="status" id="status"></div>
   </div>
 
   <div id="controls" hidden>
-    <div class="card">
-      <h2>Kenar ışığı</h2>
-      <div class="row">
-        <label>Açık / kapalı</label>
-        <label class="switch"><input type="checkbox" id="sideOn"><span></span></label>
-      </div>
-      <div class="row">
-        <label>Renk <span class="tag">deneysel</span></label>
-        <select id="sideColor">
-          <option value="0">Kırmızı</option><option value="1">Yeşil</option><option value="2">Mavi</option>
-          <option value="3">Sarı</option><option value="4">Mor</option><option value="5">Turkuaz</option>
-          <option value="6">Beyaz</option><option value="7">Gökkuşağı</option>
-        </select>
-      </div>
-      <div class="row">
-        <label>Parlaklık <span class="tag">deneysel</span></label>
-        <input type="range" id="sideLight" min="0" max="4" step="1">
-      </div>
-      <div class="row">
-        <label>Hız <span class="tag">deneysel</span></label>
-        <input type="range" id="sideSpeed" min="0" max="4" step="1">
-      </div>
-      <p class="note">Sadece açma/kapama klavyede denendi. Renk, parlaklık ve hız değerleri sürücü kodundan çıkarıldı, değiştirdiğinde ne olduğunu gör.</p>
+    <div class="tabs" role="tablist">
+      <button role="tab" data-tab="light" aria-selected="true">Işık</button>
+      <button role="tab" data-tab="keys" aria-selected="false">Tuş atama</button>
+      <button role="tab" data-tab="macros" aria-selected="false">Makrolar</button>
+      <button role="tab" data-tab="settings" aria-selected="false">Ayarlar</button>
     </div>
 
-    <div class="card">
-      <h2>Yedek</h2>
-      <div class="actions">
-        <button id="backupBtn">Yedeği indir</button>
-        <button id="restoreBtn">Yedekten geri yükle…</button>
-        <input type="file" id="restoreFile" accept=".bin" hidden>
+    <section data-panel="light">
+      <div class="card">
+        <h2>Tuş ışıkları</h2>
+        <div class="row"><label>Açık / kapalı</label>
+          <label class="switch"><input type="checkbox" id="mainOn"><span></span></label></div>
+        <div class="row"><label>Efekt</label><select id="mainEffect"></select></div>
+        <div class="row"><label>Renk</label><select id="mainColor" class="colorSel"></select></div>
+        <div class="row"><label>Parlaklık</label><input type="range" id="mainLight" min="0" max="4" step="1"></div>
+        <div class="row"><label>Hız</label><input type="range" id="mainSpeed" min="0" max="4" step="1"></div>
       </div>
-      <p class="note">Repo'daki <code>led_backup.bin</code> ilk ayarları içerir. Klavye tuhaflaşırsa onu yükle ya da Fn+Esc'e 5 sn basılı tut.</p>
-    </div>
+      <div class="card">
+        <h2>Kenar ışığı</h2>
+        <div class="row"><label>Açık / kapalı</label>
+          <label class="switch"><input type="checkbox" id="sideOn"><span></span></label></div>
+        <div class="row"><label>Renk <span class="tag">deneysel</span></label><select id="sideColor" class="colorSel"></select></div>
+        <div class="row"><label>Parlaklık <span class="tag">deneysel</span></label><input type="range" id="sideLight" min="0" max="4" step="1"></div>
+        <div class="row"><label>Hız <span class="tag">deneysel</span></label><input type="range" id="sideSpeed" min="0" max="4" step="1"></div>
+      </div>
+    </section>
 
-    <div class="card">
-      <h2>Ham LED bloğu</h2>
-      <button id="refreshBtn">Yeniden oku</button>
-      <pre id="hex"></pre>
-    </div>
+    <section data-panel="keys" hidden>
+      <div class="card">
+        <h2>Tuş atama</h2>
+        <div class="actions">
+          <label class="switch" title="Fn katmanı"><input type="checkbox" id="fnLayer"><span></span></label>
+          <span>Fn katmanı</span>
+        </div>
+        <p class="note">Bir tuşa tıkla, yeni görevini yaz. Sarı tuşlar fabrika ayarından farklı.</p>
+        <div class="kb-wrap"><div class="kb" id="kb"></div></div>
+        <div class="actions" style="margin-top:8px">
+          <button data-extra="WheelLeft">Düğme sola</button>
+          <button data-extra="WheelRight">Düğme sağa</button>
+          <button data-extra="Wheel">Düğme basma</button>
+        </div>
+        <div class="editor" id="editor" hidden>
+          <div class="row" style="border-top:0">
+            <label id="edName"></label>
+            <span class="note" id="edCur"></span>
+          </div>
+          <div class="actions">
+            <input type="text" id="edTarget" list="targets" placeholder="örn: esc, cmd+c, media:volup, macro:1, none" style="flex:1;min-width:220px">
+            <datalist id="targets"></datalist>
+            <button class="primary" id="edSave">Kaydet</button>
+            <button id="edReset">Fabrika ayarı</button>
+          </div>
+          <div class="chips" id="edChips"></div>
+        </div>
+        <div class="actions" style="margin-top:16px"><button id="keymapReset">Tüm tuşları fabrika ayarına döndür</button></div>
+      </div>
+    </section>
+
+    <section data-panel="macros" hidden>
+      <div class="card">
+        <h2>Makrolar</h2>
+        <div id="macroList"></div>
+        <h3>Yeni makro / düzenle</h3>
+        <div class="editor">
+          <div class="actions">
+            <select id="mSlot"></select>
+            <input type="text" id="mName" placeholder="ad" maxlength="30">
+          </div>
+          <textarea id="mSteps" rows="3" placeholder="tap:cmd+c&#10;text:Merhaba&#10;wait:100&#10;tap:enter"></textarea>
+          <p class="note">Her satır bir adım: <code>tap:&lt;tuş&gt;</code> <code>down:&lt;tuş&gt;</code> <code>up:&lt;tuş&gt;</code>
+            <code>text:&lt;yazı&gt;</code> (US klavye) <code>wait:&lt;ms&gt;</code> <code>click:left|right|middle</code>.
+            Tuşa atamak için Tuş atama'da <code>macro:1</code> (bir kere), <code>macro:1:hold</code> (basılıyken), <code>macro:1:toggle</code>.</p>
+          <div class="actions"><button class="primary" id="mSave">Makroyu yaz</button></div>
+        </div>
+      </div>
+    </section>
+
+    <section data-panel="settings" hidden>
+      <div class="card">
+        <h2>Ayarlar</h2>
+        <div class="row"><label>Uyku süresi</label>
+          <select id="sleep">
+            <option value="0">Hiç uyuma</option><option value="1">30 sn</option><option value="2">1 dk</option>
+            <option value="3">1.5 dk</option><option value="4">2 dk</option><option value="6">3 dk</option>
+            <option value="8">4 dk</option><option value="10">5 dk</option><option value="20">10 dk</option>
+            <option value="30">15 dk</option><option value="40">20 dk</option>
+          </select></div>
+        <div class="row"><label>Debounce <span class="tag">deneysel</span></label>
+          <input type="range" id="debounce" min="1" max="4" step="1"></div>
+        <p class="note">Pil seviyesi: kablosuz modda <b>Fn + B</b> basılı tut, F1–F10 yanan tuş sayısı × %10. Klavye pil bilgisini bilgisayara göndermiyor.</p>
+      </div>
+      <div class="card">
+        <h2>Yedek</h2>
+        <div class="actions">
+          <button id="backupBtn">Işık yedeği indir</button>
+          <button id="restoreBtn">Işık yedeğini yükle…</button>
+          <input type="file" id="restoreFile" accept=".bin" hidden>
+        </div>
+        <p class="note">Klavye tuhaflaşırsa repo'daki <code>backups/led_backup.bin</code> dosyasını yükle ya da Fn+Esc'e 5 sn basılı tut.</p>
+        <h3>Ham LED bloğu</h3>
+        <button id="refreshBtn">Yeniden oku</button>
+        <pre id="hex"></pre>
+      </div>
+    </section>
   </div>
 </main>
 
 <script>
-const VID = 0x258a, PID = 0x010c, RID = 6, PKT = 0x208, LED_LEN = 0x80;
-const SIDE = { mode: 0x12, color: 0x13, light: 0x14, speed: 0x15 };
+// ---------------------------------------------------------------- protocol
+const VID = 0x258a, PID = 0x010c, RID = 6, LED_LEN = 0x80, MATRIX_LEN = 0x200, MACRO_BUF = 0x800;
 const $ = id => document.getElementById(id);
-let dev = null, led = null, busy = Promise.resolve();
+let dev = null, led = null, keys = [], matrix = [null, null], factory = [null, null], macros = [];
+let busy = Promise.resolve(), sel = null;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const hx = (b, n = 2) => b.toString(16).padStart(n, "0");
 
 function setStatus(msg, kind = "") { const s = $("status"); s.textContent = msg; s.className = "status " + kind; }
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-
-function packet(cmd, sub, nchunks, idx, len, data) {
-  const p = new Uint8Array(PKT - 1);            // without report id
-  p.set([cmd, sub, 0, nchunks, idx, len & 0xff, len >> 8]);
-  if (data) p.set(data, 7);
-  return p;
-}
 
 async function access(cmd, sub, length, data) {
   const out = new Uint8Array(length);
   const n = Math.ceil(length / 0x200);
   for (let i = 0; i < n; i++) {
     const len = Math.min(0x200, length - i * 0x200);
-    const chunk = data ? data.subarray(i * 0x200, i * 0x200 + len) : null;
-    await dev.sendFeatureReport(RID, packet(cmd, sub, n, i, len, chunk));
+    const p = new Uint8Array(0x207);
+    p.set([cmd, sub, 0, n, i, len & 0xff, len >> 8]);
+    if (data) p.set(data.subarray(i * 0x200, i * 0x200 + len), 7);
+    await dev.sendFeatureReport(RID, p);
     await sleep(20);
     if (!data) {
       const dv = await dev.receiveFeatureReport(RID);
       const buf = new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength);
-      // The reply echoes the header. Chrome may or may not include the report ID byte,
-      // and the device sends only header + data (e.g. 136 bytes), so find the cmd echo.
+      // The reply echoes the header; Chrome may or may not include the report ID byte.
       let off;
       if (buf[0] === RID && buf[1] === cmd) off = 8;
       else if (buf[0] === cmd) off = 7;
-      else throw new Error("Beklenmeyen cevap: " + Array.from(buf.subarray(0, 8), x => x.toString(16).padStart(2, "0")).join(" "));
+      else throw new Error("Beklenmeyen cevap: " + Array.from(buf.subarray(0, 8), x => hx(x)).join(" "));
       out.set(buf.subarray(off, off + len), i * 0x200);
     }
   }
   return out;
 }
+const eq = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
 
 async function readLed() {
   const b = await access(0x84, 0, LED_LEN);
@@ -160,24 +244,307 @@ async function readLed() {
   return b;
 }
 const writeLed = b => access(0x04, 0, LED_LEN, b);
-
-function hex(b) {
-  let s = "";
-  for (let i = 0; i < b.length; i += 16)
-    s += i.toString(16).padStart(4, "0") + ": " +
-      Array.from(b.subarray(i, i + 16), x => x.toString(16).padStart(2, "0")).join(" ") + "\n";
-  return s;
+async function readMatrix(l) {
+  const m = await access(0x83, l, MATRIX_LEN);
+  if (m[0x1fe] !== 0x5a || m[0x1ff] !== 0xa5) throw new Error("Tuş haritası geçersiz okundu");
+  return m;
+}
+async function writeMatrix(l, m) {
+  await access(0x03, l, MATRIX_LEN, m);
+  if (!eq(await access(0x83, l, MATRIX_LEN), m)) throw new Error("Tuş haritası yazma doğrulanamadı");
 }
 
-function render() {
-  $("hex").textContent = hex(led);
+// ---------------------------------------------------------------- key codes
+const MODS = { ctrl: 1, lctrl: 1, shift: 2, lshift: 2, alt: 4, opt: 4, option: 4, lalt: 4, cmd: 8, win: 8, gui: 8, lcmd: 8,
+  rctrl: 0x10, rshift: 0x20, ralt: 0x40, ropt: 0x40, rcmd: 0x80, rwin: 0x80 };
+const HID = {};
+"abcdefghijklmnopqrstuvwxyz".split("").forEach((c, i) => HID[c] = 4 + i);
+"1234567890".split("").forEach((c, i) => HID[c] = 0x1e + i);
+for (let i = 0; i < 12; i++) { HID["f" + (i + 1)] = 0x3a + i; HID["f" + (i + 13)] = 0x68 + i; }
+Object.assign(HID, { enter: 0x28, esc: 0x29, backspace: 0x2a, tab: 0x2b, space: 0x2c, "-": 0x2d, "=": 0x2e,
+  "[": 0x2f, "]": 0x30, "\\": 0x31, ";": 0x33, "'": 0x34, "`": 0x35, ",": 0x36, ".": 0x37, "/": 0x38,
+  capslock: 0x39, printscreen: 0x46, scrolllock: 0x47, pause: 0x48, insert: 0x49, home: 0x4a, pgup: 0x4b,
+  delete: 0x4c, end: 0x4d, pgdn: 0x4e, right: 0x4f, left: 0x50, down: 0x51, up: 0x52, numlock: 0x53,
+  "iso\\": 0x64, menu: 0x65 });
+const HID_NAME = Object.fromEntries(Object.entries(HID).map(([k, v]) => [v, k]));
+const MEDIA = { play: 0xcd, next: 0xb5, prev: 0xb6, stop: 0xb7, mute: 0xe2, volup: 0xe9, voldown: 0xea,
+  mail: 0x18a, calc: 0x192, browser: 0x223, search: 0x221, brightup: 0x6f, brightdown: 0x70, mycomputer: 0x194 };
+const MEDIA_NAME = Object.fromEntries(Object.entries(MEDIA).map(([k, v]) => [v, k]));
+const SPECIAL = {
+  "07000001": "win-kilidi", "07000004": "fabrika-ayarı", "07000005": "bt1", "07000006": "bt2", "07000007": "bt3",
+  "07000008": "2.4g", "0700000a": "oyun-modu", "0700000e": "windows-modu", "0700000f": "mac-modu",
+  "07000016": "android-modu", "07000011": "pil-göstergesi", "07000014": "düğme-basma",
+  "03000000": "düğme-sola", "03000001": "düğme-sağa", "08000000": "ışık-efekt", "08000001": "kenar-ışık-efekt",
+  "08020000": "ışık-renk", "08020001": "kenar-ışık-renk", "08030100": "ışık-parlaklık+", "08030200": "ışık-parlaklık-",
+  "08030001": "kenar-ışık-parlaklık", "08040100": "ışık-hız+", "08040200": "ışık-hız-", "08040001": "kenar-ışık-hız",
+  "0d000000": "fn" };
+const SPECIAL_BY_NAME = Object.fromEntries(Object.entries(SPECIAL).map(([k, v]) => [v, k]));
+const MOD_BITS = [[1, "ctrl"], [2, "shift"], [4, "alt"], [8, "cmd"], [0x10, "rctrl"], [0x20, "rshift"], [0x40, "ralt"], [0x80, "rcmd"]];
+const MACRO_MODES = { once: 1, toggle: 2, hold: 4 };
+
+function encodeTarget(spec) {
+  const s = spec.trim().toLowerCase();
+  if (["none", "off", "disable", "boş", ""].includes(s)) return new Uint8Array(4);
+  if (s.startsWith("media:")) {
+    const u = MEDIA[s.slice(6)]; if (u === undefined) throw new Error("bilinmeyen medya tuşu: " + s.slice(6));
+    return new Uint8Array([2, 0, u >> 8, u & 0xff]);
+  }
+  if (s.startsWith("fn:")) {
+    const k = SPECIAL_BY_NAME[s.slice(3)]; if (!k) throw new Error("bilinmeyen özel fonksiyon: " + s.slice(3));
+    return new Uint8Array(k.match(/../g).map(x => parseInt(x, 16)));
+  }
+  if (s.startsWith("macro:")) {
+    const [no, mode = "once", rep = "1"] = s.slice(6).split(":");
+    const m = MACRO_MODES[mode], n = parseInt(no);
+    if (!m || !(n >= 1 && n <= 32)) throw new Error("macro:<1-32>[:once|toggle|hold[:tekrar]]");
+    return new Uint8Array([3, m, m === 1 ? parseInt(rep) & 0xff : 1, n - 1]);
+  }
+  if (s.startsWith("raw:")) {
+    const h = s.slice(4); if (!/^[0-9a-f]{8}$/.test(h)) throw new Error("raw: 8 hex karakter");
+    return new Uint8Array(h.match(/../g).map(x => parseInt(x, 16)));
+  }
+  let mod = 0, code = 0;
+  for (const p of (s === "+" ? ["+"] : s.split("+"))) {
+    if (p in MODS) mod |= MODS[p];
+    else if (p in HID) { if (code) throw new Error("kombinasyonda tek normal tuş olabilir"); code = HID[p]; }
+    else throw new Error("bilinmeyen tuş: " + p);
+  }
+  return new Uint8Array([0, mod, 0, code]);
+}
+
+function decodeEntry(e) {
+  const h = Array.from(e, x => hx(x)).join("");
+  if (h === "00000000") return "(boş)";
+  if (e[0] === 0) {
+    const n = MOD_BITS.filter(([b]) => e[1] & b).map(([, n]) => n);
+    if (e[3]) n.push(HID_NAME[e[3]] || "hid:" + hx(e[3]));
+    return n.length ? n.join("+") : "raw:" + h;
+  }
+  if (e[0] === 2) { const u = (e[2] << 8) | e[3]; return "media:" + (MEDIA_NAME[u] || hx(u, 4)); }
+  if (SPECIAL[h]) return "fn:" + SPECIAL[h];
+  if (e[0] === 3 && [1, 2, 4].includes(e[1])) {
+    const mode = { 1: "once", 2: "toggle", 4: "hold" }[e[1]];
+    return `macro:${e[3] + 1}:${mode}` + (e[1] === 1 && e[2] !== 1 ? ":" + e[2] : "");
+  }
+  return "raw:" + h;
+}
+const shortLabel = t => t.replace(/^media:/, "♪").replace(/^fn:/, "").replace(/^macro:(\d+).*/, "M$1").replace("(boş)", "—");
+
+// ---------------------------------------------------------------- macros
+const MOD_HID = { 1: 0xe0, 2: 0xe1, 4: 0xe2, 8: 0xe3, 0x10: 0xe4, 0x20: 0xe5, 0x40: 0xe6, 0x80: 0xe7 };
+const HID_MOD_NAME = { 0xe0: "ctrl", 0xe1: "shift", 0xe2: "alt", 0xe3: "cmd", 0xe4: "rctrl", 0xe5: "rshift", 0xe6: "ralt", 0xe7: "rcmd" };
+const MOUSE = { left: 1, right: 2, middle: 4, back: 8, forward: 0x10 };
+const CHARS = {};
+"abcdefghijklmnopqrstuvwxyz".split("").forEach((c, i) => { CHARS[c] = [4 + i, 0]; CHARS[c.toUpperCase()] = [4 + i, 1]; });
+"1234567890".split("").forEach((c, i) => CHARS[c] = [0x1e + i, 0]);
+"!@#$%^&*()".split("").forEach((c, i) => CHARS[c] = [0x1e + i, 1]);
+[[" ", 0x2c, 0], ["-", 0x2d, 0], ["_", 0x2d, 1], ["=", 0x2e, 0], ["+", 0x2e, 1], ["[", 0x2f, 0], ["{", 0x2f, 1],
+ ["]", 0x30, 0], ["}", 0x30, 1], ["\\", 0x31, 0], ["|", 0x31, 1], [";", 0x33, 0], [":", 0x33, 1], ["'", 0x34, 0],
+ ['"', 0x34, 1], ["`", 0x35, 0], ["~", 0x35, 1], [",", 0x36, 0], ["<", 0x36, 1], [".", 0x37, 0], [">", 0x37, 1],
+ ["/", 0x38, 0], ["?", 0x38, 1]].forEach(([c, u, s]) => CHARS[c] = [u, s]);
+
+function ev(typ, code, release, delay = 10) {
+  delay = Math.max(0, Math.min(delay | 0, 0xfffff));
+  if (typ === 0 && code >= 0xe0 && code <= 0xe7) typ = 1;     // modifiers are type 1
+  const b0 = (typ << 4) | ((delay >> 16) & 0xf) | (release && typ <= 2 ? 0x80 : 0);
+  return [b0, (delay >> 8) & 0xff, delay & 0xff, code & 0xff];
+}
+function keyCodes(spec) {
+  const r = encodeTarget(spec);
+  if (r[0] !== 0) throw new Error("makroda sadece klavye tuşları: " + spec);
+  const c = MOD_BITS.filter(([b]) => r[1] & b).map(([b]) => MOD_HID[b]);
+  if (r[3]) c.push(r[3]);
+  return c;
+}
+function compileSteps(lines) {
+  const out = [];
+  for (const raw of lines) {
+    const line = raw.trim(); if (!line) continue;
+    const i = line.indexOf(":"); if (i < 0) throw new Error("adım anlaşılmadı: " + line);
+    const kind = line.slice(0, i).toLowerCase(), arg = line.slice(i + 1);
+    if (kind === "wait") {
+      if (!out.length) throw new Error("wait ilk adım olamaz");
+      const l = out[out.length - 1], d = ((l[0] & 0xf) << 16 | l[1] << 8 | l[2]) + parseInt(arg);
+      out[out.length - 1] = ev((l[0] >> 4) & 7, l[3], !!(l[0] & 0x80), d);
+    } else if (kind === "tap") {
+      const c = keyCodes(arg); c.forEach(x => out.push(ev(0, x, false))); [...c].reverse().forEach(x => out.push(ev(0, x, true)));
+    } else if (kind === "down" || kind === "up") {
+      keyCodes(arg).forEach(x => out.push(ev(0, x, kind === "up")));
+    } else if (kind === "text") {
+      for (const ch of arg) {
+        const m = CHARS[ch]; if (!m) throw new Error("yazılamayan karakter: " + ch + " (sadece US klavye karakterleri)");
+        if (m[1]) out.push(ev(0, 0xe1, false, 0));
+        out.push(ev(0, m[0], false), ev(0, m[0], true));
+        if (m[1]) out.push(ev(0, 0xe1, true, 0));
+      }
+    } else if (kind === "click") {
+      const b = MOUSE[arg.toLowerCase()]; if (!b) throw new Error("bilinmeyen fare tuşu: " + arg);
+      out.push(ev(2, b, false), ev(2, b, true));
+    } else throw new Error("bilinmeyen adım: " + line);
+  }
+  if (!out.length) throw new Error("makro boş");
+  return new Uint8Array(out.flat());
+}
+function packMacros(list) {
+  const bodies = list.map(([name, evs]) => {
+    const nm = []; for (const ch of name.slice(0, 30)) { const c = ch.charCodeAt(0); nm.push(c & 0xff, c >> 8); }
+    return new Uint8Array([nm.length, ...nm, ...evs]);
+  });
+  const buf = new Uint8Array(MACRO_BUF);
+  let addr = 4 * list.length, pos = 0;
+  bodies.forEach(b => { buf.set([addr & 0xff, addr >> 8, b.length & 0xff, b.length >> 8], pos); pos += 4; addr += b.length; });
+  if (addr > MACRO_BUF) throw new Error("makrolar sığmıyor");
+  bodies.forEach(b => { buf.set(b, pos); pos += b.length; });
+  return buf;
+}
+function unpackMacros(buf) {
+  const out = []; if (!buf.some(x => x)) return out;
+  const n = (buf[0] | buf[1] << 8) / 4;
+  for (let i = 0; i < n; i++) {
+    const addr = buf[i * 4] | buf[i * 4 + 1] << 8, size = buf[i * 4 + 2] | buf[i * 4 + 3] << 8;
+    if (!size || addr + size > buf.length) break;
+    const body = buf.subarray(addr, addr + size), nl = body[0];
+    let name = ""; for (let j = 0; j < nl; j += 2) name += String.fromCharCode(body[1 + j] | body[2 + j] << 8);
+    out.push([name, body.slice(1 + nl)]);
+  }
+  return out;
+}
+function describeMacro(evs) {
+  const p = [];
+  for (let i = 0; i + 3 < evs.length; i += 4) {
+    const [b0, d1, d2, c] = evs.subarray(i, i + 4), t = (b0 >> 4) & 7, up = b0 & 0x80, d = (b0 & 0xf) << 16 | d1 << 8 | d2;
+    if (t <= 1) p.push((up ? "↑" : "↓") + (HID_MOD_NAME[c] || HID_NAME[c] || "hid:" + hx(c)));
+    else if (t === 2) p.push((up ? "↑" : "↓") + "fare-" + (Object.keys(MOUSE).find(k => MOUSE[k] === c) || c));
+    else p.push(`tip${t}:${c}`);
+    if (d && d !== 10) p.push(`(${d}ms)`);
+  }
+  return p.join(" ");
+}
+function stepsFromEvents(evs) {   // best-effort reverse for editing
+  const s = [];
+  for (let i = 0; i + 3 < evs.length; i += 4) {
+    const [b0, d1, d2, c] = evs.subarray(i, i + 4), t = (b0 >> 4) & 7, up = b0 & 0x80, d = (b0 & 0xf) << 16 | d1 << 8 | d2;
+    if (t <= 1) s.push(`${up ? "up" : "down"}:${HID_MOD_NAME[c] || HID_NAME[c] || "raw"}`);
+    else if (t === 2 && !up) s.push(`click:${Object.keys(MOUSE).find(k => MOUSE[k] === c)}`);
+    else continue;
+    if (d > 10) s.push(`wait:${d - 10}`);
+  }
+  return s.join("\n");
+}
+
+// ---------------------------------------------------------------- lighting
+const EFFECTS = [[1, "Sabit"], [2, "Nefes"], [3, "Gökkuşağı"], [4, "Kaybolan flaş"], [5, "Yağmur damlası"],
+  [6, "Gökkuşağı çarkı"], [7, "Parlayan dalgalar"], [8, "Yıldızlar"], [9, "Kaybolan gölge"], [10, "Retro yılan"],
+  [11, "Neon akış"], [12, "Tepki"], [13, "Sinüs dalgası"], [14, "Tarama"], [15, "Dönen yel değirmeni"],
+  [16, "Renkli şelale"], [17, "Çiçeklenme"], [18, "Dönen fırtına"]];
+const EFFECT_ORDER = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 21];
+const COLORS = ["Kırmızı", "Yeşil", "Mavi", "Sarı", "Mor", "Turkuaz", "Beyaz", "Renkli"];
+const SIDE = { mode: 0x12, color: 0x13, light: 0x14, speed: 0x15 };
+const PAIRS = 0x3a, SLEEP = 0x18, DEBOUNCE = 0x03;
+let lastEffect = 1, lastSide = 1;
+const pairIdx = e => PAIRS + 2 * EFFECT_ORDER.indexOf(e);
+
+function setEffect(b, e) {
+  if (!e) { if (b[0x0a]) lastEffect = b[0x0a]; b[0x0a] = 0; return; }
+  b[0x0a] = e; b[0x0b] = 0x20 + EFFECT_ORDER.indexOf(e); b[0x09] = e === 21 ? 1 : 0;
+}
+
+function renderLight() {
+  $("hex").textContent = Array.from({ length: LED_LEN / 16 }, (_, r) =>
+    hx(r * 16, 4) + ": " + Array.from(led.subarray(r * 16, r * 16 + 16), x => hx(x)).join(" ")).join("\n");
+  const e = led[0x0a], on = e !== 0 && EFFECT_ORDER.includes(e);
+  $("mainOn").checked = on;
+  for (const id of ["mainEffect", "mainColor", "mainLight", "mainSpeed"]) $(id).disabled = !on;
+  if (on) {
+    $("mainEffect").value = e; const i = pairIdx(e);
+    $("mainLight").value = led[i]; $("mainSpeed").value = led[i + 1] >> 4; $("mainColor").value = Math.min(led[i + 1] & 0xf, 7);
+  }
   $("sideOn").checked = led[SIDE.mode] !== 0;
-  $("sideColor").value = String(Math.min(led[SIDE.color], 7));
-  $("sideLight").value = led[SIDE.light];
-  $("sideSpeed").value = led[SIDE.speed];
+  $("sideColor").value = Math.min(led[SIDE.color], 7); $("sideLight").value = led[SIDE.light]; $("sideSpeed").value = led[SIDE.speed];
   for (const id of ["sideColor", "sideLight", "sideSpeed"]) $(id).disabled = led[SIDE.mode] === 0;
+  $("sleep").value = led[SLEEP]; $("debounce").value = led[DEBOUNCE];
 }
 
+// ---------------------------------------------------------------- keyboard UI
+const layer = () => $("fnLayer").checked ? 1 : 0;
+function entryOf(l, idx, src = matrix) { return src[l].slice(idx * 4, idx * 4 + 4); }
+
+function renderKeyboard() {
+  const kb = $("kb"); kb.innerHTML = ""; const l = layer();
+  for (const k of keys) {
+    if (!k.x2) continue;
+    const el = document.createElement("button");
+    el.className = "key"; el.dataset.name = k.name;
+    Object.assign(el.style, { left: (k.x1 - 16) / 6 + "%", top: (k.y1 - 22) / 2.4 + "%",
+      width: (k.x2 - k.x1) / 6 + "%", height: (k.y2 - k.y1) / 2.4 + "%" });
+    const t = decodeEntry(entryOf(l, k.led));
+    const changed = !eq(entryOf(l, k.led), entryOf(l, k.led, factory));
+    if (changed) el.classList.add("changed");
+    if (sel === k.name) el.classList.add("sel");
+    el.innerHTML = `<span class="n">${k.name}</span><span class="t"></span>`;
+    el.querySelector(".t").textContent = shortLabel(t);
+    el.title = `${k.name} → ${t}`;
+    el.onclick = () => selectKey(k.name);
+    kb.appendChild(el);
+  }
+  if (sel) selectKey(sel, true);
+}
+function selectKey(name, keepInput) {
+  sel = name; const k = keys.find(x => x.name === name), l = layer();
+  $("editor").hidden = false;
+  $("edName").textContent = (l ? "Fn + " : "") + name;
+  const cur = decodeEntry(entryOf(l, k.led)), fac = decodeEntry(entryOf(l, k.led, factory));
+  $("edCur").textContent = `şu an: ${cur}` + (cur !== fac ? `  (fabrika: ${fac})` : "");
+  if (!keepInput) { $("edTarget").value = cur === "(boş)" ? "" : cur; $("edTarget").focus(); }
+  document.querySelectorAll(".key").forEach(e => e.classList.toggle("sel", e.dataset.name === name));
+}
+async function saveKey(bytes) {
+  const k = keys.find(x => x.name === sel), l = layer();
+  const m = matrix[l].slice(); m.set(bytes, k.led * 4);
+  await writeMatrix(l, m); matrix[l] = m; renderKeyboard();
+}
+
+// ---------------------------------------------------------------- macros UI
+function renderMacros() {
+  const list = $("macroList"); list.innerHTML = "";
+  if (!macros.length) list.innerHTML = '<p class="note">Kayıtlı makro yok.</p>';
+  macros.forEach(([name, evs], i) => {
+    const d = document.createElement("div"); d.className = "macro-item";
+    d.innerHTML = `<div class="actions"><b></b><button data-a="edit">Düzenle</button><button data-a="del">Sil</button></div><div class="ev"></div>`;
+    d.querySelector("b").textContent = `${i + 1}. ${name}`;
+    d.querySelector(".ev").textContent = describeMacro(evs);
+    d.querySelector('[data-a=edit]').onclick = () => { $("mSlot").value = i + 1; $("mName").value = name; $("mSteps").value = stepsFromEvents(evs); };
+    d.querySelector('[data-a=del]').onclick = () => run(() => deleteMacro(i + 1), "Makro silindi.");
+    list.appendChild(d);
+  });
+  $("mSlot").innerHTML = "";
+  for (let i = 1; i <= Math.min(macros.length + 1, 32); i++)
+    $("mSlot").add(new Option(i <= macros.length ? `${i}. (üzerine yaz)` : `${i}. (yeni)`, i));
+  $("mSlot").value = macros.length + 1;
+}
+async function writeMacros(list) {
+  const buf = packMacros(list);
+  await access(0x05, 0, MACRO_BUF, buf);
+  if (!eq(await access(0x85, 0, MACRO_BUF), buf)) throw new Error("Makro yazma doğrulanamadı");
+  macros = unpackMacros(buf); renderMacros();
+}
+async function deleteMacro(no) {
+  const list = macros.slice(); list.splice(no - 1, 1);
+  await writeMacros(list);
+  for (const l of [0, 1]) {                       // drop / shift key assignments
+    const m = matrix[l].slice(); let changed = false;
+    for (let i = 0; i < MATRIX_LEN - 4; i += 4) {
+      if (m[i] === 3 && [1, 2, 4].includes(m[i + 1])) {
+        if (m[i + 3] === no - 1) { m.set(factory[l].subarray(i, i + 4), i); changed = true; }
+        else if (m[i + 3] > no - 1) { m[i + 3]--; changed = true; }
+      }
+    }
+    if (changed) { await writeMatrix(l, m); matrix[l] = m; }
+  }
+  renderKeyboard();
+}
+
+// ---------------------------------------------------------------- wiring
 function run(fn, okMsg) {
   busy = busy.then(async () => {
     try { await fn(); if (okMsg) setStatus(okMsg, "ok"); }
@@ -185,15 +552,13 @@ function run(fn, okMsg) {
   });
   return busy;
 }
+const updateLed = (mutate, msg) => run(async () => {
+  const b = await readLed(); mutate(b); await writeLed(b); led = await readLed(); renderLight();
+}, msg);
 
-async function update(mutate, msg) {
-  return run(async () => {
-    const b = await readLed();      // read-modify-write, never build from scratch
-    mutate(b);
-    await writeLed(b);
-    led = await readLed();
-    render();
-  }, msg);
+async function fetchBin(path) {
+  const r = await fetch(path); if (!r.ok) throw new Error(path + " yüklenemedi");
+  return new Uint8Array(await r.arrayBuffer());
 }
 
 $("connectBtn").onclick = () => run(async () => {
@@ -202,26 +567,70 @@ $("connectBtn").onclick = () => run(async () => {
   dev = devs.find(d => d.collections.some(c => c.usagePage === 0xff00)) || devs[0];
   if (!dev) throw new Error("Klavye seçilmedi. Kabloyla bağlı ve kablolu modda olduğundan emin ol.");
   if (!dev.opened) await dev.open();
+  [keys, factory[0], factory[1]] = await Promise.all([
+    fetch("keys.json").then(r => r.json()), fetchBin("backups/matrix_backup_l0.bin"), fetchBin("backups/matrix_backup_l1.bin")]);
   led = await readLed();
-  render();
-  $("controls").hidden = false;
-  $("connectBtn").textContent = "Bağlandı ✓";
-  $("connectBtn").disabled = true;
+  matrix[0] = await readMatrix(0); matrix[1] = await readMatrix(1);
+  macros = unpackMacros(await access(0x85, 0, MACRO_BUF));
+  renderLight(); renderKeyboard(); renderMacros();
+  $("controls").hidden = false; $("connectBtn").textContent = "Bağlandı ✓"; $("connectBtn").disabled = true;
 }, "Bağlandı.");
 
-let lastMode = 1;
-$("sideOn").onchange = e => update(b => {
-  if (e.target.checked) b[SIDE.mode] = lastMode || 1;
-  else { if (b[SIDE.mode]) lastMode = b[SIDE.mode]; b[SIDE.mode] = 0; }
-}, e.target.checked ? "Kenar ışığı açıldı." : "Kenar ışığı kapatıldı.");
-$("sideColor").onchange = e => update(b => b[SIDE.color] = +e.target.value, "Renk yazıldı.");
-$("sideLight").onchange = e => update(b => b[SIDE.light] = +e.target.value, "Parlaklık yazıldı.");
-$("sideSpeed").onchange = e => update(b => b[SIDE.speed] = +e.target.value, "Hız yazıldı.");
-$("refreshBtn").onclick = () => run(async () => { led = await readLed(); render(); }, "Okundu.");
+// tabs
+document.querySelectorAll("[role=tab]").forEach(b => b.onclick = () => {
+  document.querySelectorAll("[role=tab]").forEach(x => x.setAttribute("aria-selected", x === b));
+  document.querySelectorAll("[data-panel]").forEach(p => p.hidden = p.dataset.panel !== b.dataset.tab);
+});
 
+// light controls
+EFFECTS.forEach(([id, n]) => $("mainEffect").add(new Option(n, id)));
+document.querySelectorAll(".colorSel").forEach(s => COLORS.forEach((c, i) => s.add(new Option(c, i))));
+$("mainOn").onchange = e => updateLed(b => setEffect(b, e.target.checked ? lastEffect || 1 : 0),
+  e.target.checked ? "Tuş ışıkları açıldı." : "Tuş ışıkları kapatıldı.");
+$("mainEffect").onchange = e => updateLed(b => setEffect(b, +e.target.value), "Efekt yazıldı.");
+const pairSet = fn => b => { const e = b[0x0a]; if (EFFECT_ORDER.includes(e)) fn(b, pairIdx(e)); };
+$("mainLight").onchange = e => updateLed(pairSet((b, i) => b[i] = +e.target.value), "Parlaklık yazıldı.");
+$("mainSpeed").onchange = e => updateLed(pairSet((b, i) => b[i + 1] = (+e.target.value << 4) | (b[i + 1] & 0xf)), "Hız yazıldı.");
+$("mainColor").onchange = e => updateLed(pairSet((b, i) => b[i + 1] = (b[i + 1] & 0xf0) | +e.target.value), "Renk yazıldı.");
+$("sideOn").onchange = e => updateLed(b => {
+  if (e.target.checked) b[SIDE.mode] = lastSide || 1; else { if (b[SIDE.mode]) lastSide = b[SIDE.mode]; b[SIDE.mode] = 0; }
+}, e.target.checked ? "Kenar ışığı açıldı." : "Kenar ışığı kapatıldı.");
+$("sideColor").onchange = e => updateLed(b => b[SIDE.color] = +e.target.value, "Renk yazıldı.");
+$("sideLight").onchange = e => updateLed(b => b[SIDE.light] = +e.target.value, "Parlaklık yazıldı.");
+$("sideSpeed").onchange = e => updateLed(b => b[SIDE.speed] = +e.target.value, "Hız yazıldı.");
+$("sleep").onchange = e => updateLed(b => b[SLEEP] = +e.target.value, "Uyku süresi yazıldı.");
+$("debounce").onchange = e => updateLed(b => b[DEBOUNCE] = +e.target.value, "Debounce yazıldı.");
+$("refreshBtn").onclick = () => run(async () => { led = await readLed(); renderLight(); }, "Okundu.");
+
+// key editor
+const TARGETS = [...Object.keys(HID), ...Object.keys(MODS), ...Object.keys(MEDIA).map(m => "media:" + m),
+  ...Object.values(SPECIAL).map(s => "fn:" + s), "none", "cmd+c", "cmd+v", "cmd+z", "cmd+shift+4", "ctrl+alt+delete"];
+TARGETS.forEach(t => $("targets").appendChild(new Option(t)));
+["esc", "cmd", "ctrl", "alt", "media:volup", "media:voldown", "media:mute", "media:play", "cmd+c", "cmd+v", "none"]
+  .forEach(t => { const b = document.createElement("button"); b.textContent = t; b.onclick = () => { $("edTarget").value = t; }; $("edChips").appendChild(b); });
+$("fnLayer").onchange = () => renderKeyboard();
+document.querySelectorAll("[data-extra]").forEach(b => b.onclick = () => selectKey(b.dataset.extra));
+$("edSave").onclick = () => run(async () => { await saveKey(encodeTarget($("edTarget").value)); }, "Tuş yazıldı.");
+$("edTarget").onkeydown = e => { if (e.key === "Enter") $("edSave").click(); };
+$("edReset").onclick = () => run(async () => {
+  const k = keys.find(x => x.name === sel); await saveKey(entryOf(layer(), k.led, factory)); selectKey(sel);
+}, "Fabrika atamasına döndü.");
+$("keymapReset").onclick = () => run(async () => {
+  for (const l of [0, 1]) { await writeMatrix(l, factory[l]); matrix[l] = factory[l].slice(); }
+  renderKeyboard();
+}, "Tuş haritası fabrika ayarına döndü.");
+
+// macro editor
+$("mSave").onclick = () => run(async () => {
+  const name = $("mName").value.trim() || "makro", slot = +$("mSlot").value;
+  const evs = compileSteps($("mSteps").value.split("\n"));
+  const list = macros.slice(); list[slot - 1] = [name, evs];
+  await writeMacros(list);
+}, "Makro yazıldı.");
+
+// backups
 $("backupBtn").onclick = () => run(async () => {
-  const b = await readLed();
-  const a = document.createElement("a");
+  const b = await readLed(), a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([b], { type: "application/octet-stream" }));
   a.download = "au75_led_backup.bin"; a.click();
 }, "Yedek indirildi.");
@@ -230,7 +639,7 @@ $("restoreFile").onchange = async e => {
   const f = e.target.files[0]; if (!f) return;
   const b = new Uint8Array(await f.arrayBuffer()); e.target.value = "";
   if (b.length !== LED_LEN || b[0x7e] !== 0x5a || b[0x7f] !== 0xa5) { setStatus("Geçersiz yedek dosyası.", "err"); return; }
-  run(async () => { await writeLed(b); led = await readLed(); render(); }, "Yedek geri yüklendi.");
+  run(async () => { await writeLed(b); led = await readLed(); renderLight(); }, "Yedek geri yüklendi.");
 };
 
 navigator.hid?.addEventListener("disconnect", ev => {
