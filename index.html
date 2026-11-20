@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AU75 Işık Kontrolü</title>
+<style>
+  :root {
+    --bg: #f5f5f4; --card: #ffffff; --text: #1c1917; --muted: #78716c;
+    --line: #e7e5e4; --accent: #0a93ff; --accent-text: #ffffff;
+    --ok: #15803d; --err: #b91c1c; --code: #f5f5f4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161616; --card: #212121; --text: #ededed; --muted: #9a9a9a;
+      --line: #333333; --accent: #3aa8ff; --accent-text: #0b0b0b;
+      --ok: #4ade80; --err: #f87171; --code: #1a1a1a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 640px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 20px; margin-bottom: 16px; }
+  .card h2 { font-size: 16px; margin: 0 0 12px; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 10px 0; border-top: 1px solid var(--line); }
+  .row:first-of-type { border-top: 0; }
+  .row label { font-weight: 500; }
+  .row small { display: block; color: var(--muted); font-weight: 400; }
+  button { font: inherit; border: 1px solid var(--line); background: var(--card); color: var(--text);
+    padding: 8px 14px; border-radius: 8px; cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  select, input[type=range] { font: inherit; }
+  select { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--text); }
+  input[type=range] { width: 160px; accent-color: var(--accent); }
+  .switch { position: relative; width: 48px; height: 28px; flex: none; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch span { position: absolute; inset: 0; background: var(--line); border-radius: 28px; transition: .15s; cursor: pointer; }
+  .switch span::before { content: ""; position: absolute; width: 22px; height: 22px; left: 3px; top: 3px;
+    background: #fff; border-radius: 50%; transition: .15s; }
+  .switch input:checked + span { background: var(--accent); }
+  .switch input:checked + span::before { transform: translateX(20px); }
+  .status { font-size: 14px; color: var(--muted); margin-top: 12px; min-height: 1.5em; }
+  .status.ok { color: var(--ok); } .status.err { color: var(--err); }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  pre { background: var(--code); border: 1px solid var(--line); border-radius: 8px; padding: 12px;
+    font: 12px/1.5 ui-monospace, Menlo, monospace; overflow-x: auto; margin: 12px 0 0; }
+  .tag { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; margin-left: 6px; }
+  .note { color: var(--muted); font-size: 14px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>AU75 Işık Kontrolü</h1>
+  <p class="sub">AULA AU75 klavyenin ışıklarını tarayıcıdan ayarla. Kurulum gerekmez.</p>
+
+  <div class="card" id="connectCard">
+    <h2>Bağlantı</h2>
+    <p class="note" id="support">Klavyeyi <b>USB kabloyla</b> bağla, sonra aşağıdaki butona bas ve listeden klavyeyi seç.
+      Ayarlar klavyenin hafızasına yazılır, kablosuz kullanınca da kalır.</p>
+    <div class="actions">
+      <button class="primary" id="connectBtn">Klavyeye bağlan</button>
+    </div>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div id="controls" hidden>
+    <div class="card">
+      <h2>Kenar ışığı</h2>
+      <div class="row">
+        <label>Açık / kapalı</label>
+        <label class="switch"><input type="checkbox" id="sideOn"><span></span></label>
+      </div>
+      <div class="row">
+        <label>Renk <span class="tag">deneysel</span></label>
+        <select id="sideColor">
+          <option value="0">Kırmızı</option><option value="1">Yeşil</option><option value="2">Mavi</option>
+          <option value="3">Sarı</option><option value="4">Mor</option><option value="5">Turkuaz</option>
+          <option value="6">Beyaz</option><option value="7">Gökkuşağı</option>
+        </select>
+      </div>
+      <div class="row">
+        <label>Parlaklık <span class="tag">deneysel</span></label>
+        <input type="range" id="sideLight" min="0" max="4" step="1">
+      </div>
+      <div class="row">
+        <label>Hız <span class="tag">deneysel</span></label>
+        <input type="range" id="sideSpeed" min="0" max="4" step="1">
+      </div>
+      <p class="note">Sadece açma/kapama klavyede denendi. Renk, parlaklık ve hız değerleri sürücü kodundan çıkarıldı, değiştirdiğinde ne olduğunu gör.</p>
+    </div>
+
+    <div class="card">
+      <h2>Yedek</h2>
+      <div class="actions">
+        <button id="backupBtn">Yedeği indir</button>
+        <button id="restoreBtn">Yedekten geri yükle…</button>
+        <input type="file" id="restoreFile" accept=".bin" hidden>
+      </div>
+      <p class="note">Repo'daki <code>led_backup.bin</code> ilk ayarları içerir. Klavye tuhaflaşırsa onu yükle ya da Fn+Esc'e 5 sn basılı tut.</p>
+    </div>
+
+    <div class="card">
+      <h2>Ham LED bloğu</h2>
+      <button id="refreshBtn">Yeniden oku</button>
+      <pre id="hex"></pre>
+    </div>
+  </div>
+</main>
+
+<script>
+const VID = 0x258a, PID = 0x010c, RID = 6, PKT = 0x208, LED_LEN = 0x80;
+const SIDE = { mode: 0x12, color: 0x13, light: 0x14, speed: 0x15 };
+const $ = id => document.getElementById(id);
+let dev = null, led = null, busy = Promise.resolve();
+
+function setStatus(msg, kind = "") { const s = $("status"); s.textContent = msg; s.className = "status " + kind; }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function packet(cmd, sub, nchunks, idx, len, data) {
+  const p = new Uint8Array(PKT - 1);            // without report id
+  p.set([cmd, sub, 0, nchunks, idx, len & 0xff, len >> 8]);
+  if (data) p.set(data, 7);
+  return p;
+}
+
+async function access(cmd, sub, length, data) {
+  const out = new Uint8Array(length);
+  const n = Math.ceil(length / 0x200);
+  for (let i = 0; i < n; i++) {
+    const len = Math.min(0x200, length - i * 0x200);
+    const chunk = data ? data.subarray(i * 0x200, i * 0x200 + len) : null;
+    await dev.sendFeatureReport(RID, packet(cmd, sub, n, i, len, chunk));
+    await sleep(20);
+    if (!data) {
+      const dv = await dev.receiveFeatureReport(RID);
+      const buf = new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength);
+      const off = buf.length >= PKT ? 8 : 7;     // some platforms include the report id byte
+      out.set(buf.subarray(off, off + len), i * 0x200);
+    }
+  }
+  return out;
+}
+
+async function readLed() {
+  const b = await access(0x84, 0, LED_LEN);
+  if (b[0x7e] !== 0x5a || b[0x7f] !== 0xa5) throw new Error("LED bloğu geçersiz okundu");
+  return b;
+}
+const writeLed = b => access(0x04, 0, LED_LEN, b);
+
+function hex(b) {
+  let s = "";
+  for (let i = 0; i < b.length; i += 16)
+    s += i.toString(16).padStart(4, "0") + ": " +
+      Array.from(b.subarray(i, i + 16), x => x.toString(16).padStart(2, "0")).join(" ") + "\n";
+  return s;
+}
+
+function render() {
+  $("hex").textContent = hex(led);
+  $("sideOn").checked = led[SIDE.mode] !== 0;
+  $("sideColor").value = String(Math.min(led[SIDE.color], 7));
+  $("sideLight").value = led[SIDE.light];
+  $("sideSpeed").value = led[SIDE.speed];
+  for (const id of ["sideColor", "sideLight", "sideSpeed"]) $(id).disabled = led[SIDE.mode] === 0;
+}
+
+function run(fn, okMsg) {
+  busy = busy.then(async () => {
+    try { await fn(); if (okMsg) setStatus(okMsg, "ok"); }
+    catch (e) { console.error(e); setStatus("Hata: " + e.message, "err"); }
+  });
+  return busy;
+}
+
+async function update(mutate, msg) {
+  return run(async () => {
+    const b = await readLed();      // read-modify-write, never build from scratch
+    mutate(b);
+    await writeLed(b);
+    led = await readLed();
+    render();
+  }, msg);
+}
+
+$("connectBtn").onclick = () => run(async () => {
+  if (!("hid" in navigator)) throw new Error("Bu tarayıcı WebHID desteklemiyor. Chrome, Edge ya da Opera kullan.");
+  const devs = await navigator.hid.requestDevice({ filters: [{ vendorId: VID, productId: PID, usagePage: 0xff00 }] });
+  dev = devs.find(d => d.collections.some(c => c.usagePage === 0xff00)) || devs[0];
+  if (!dev) throw new Error("Klavye seçilmedi. Kabloyla bağlı ve kablolu modda olduğundan emin ol.");
+  if (!dev.opened) await dev.open();
+  led = await readLed();
+  render();
+  $("controls").hidden = false;
+  $("connectBtn").textContent = "Bağlandı ✓";
+  $("connectBtn").disabled = true;
+}, "Bağlandı.");
+
+let lastMode = 1;
+$("sideOn").onchange = e => update(b => {
+  if (e.target.checked) b[SIDE.mode] = lastMode || 1;
+  else { if (b[SIDE.mode]) lastMode = b[SIDE.mode]; b[SIDE.mode] = 0; }
+}, e.target.checked ? "Kenar ışığı açıldı." : "Kenar ışığı kapatıldı.");
+$("sideColor").onchange = e => update(b => b[SIDE.color] = +e.target.value, "Renk yazıldı.");
+$("sideLight").onchange = e => update(b => b[SIDE.light] = +e.target.value, "Parlaklık yazıldı.");
+$("sideSpeed").onchange = e => update(b => b[SIDE.speed] = +e.target.value, "Hız yazıldı.");
+$("refreshBtn").onclick = () => run(async () => { led = await readLed(); render(); }, "Okundu.");
+
+$("backupBtn").onclick = () => run(async () => {
+  const b = await readLed();
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([b], { type: "application/octet-stream" }));
+  a.download = "au75_led_backup.bin"; a.click();
+}, "Yedek indirildi.");
+$("restoreBtn").onclick = () => $("restoreFile").click();
+$("restoreFile").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  const b = new Uint8Array(await f.arrayBuffer()); e.target.value = "";
+  if (b.length !== LED_LEN || b[0x7e] !== 0x5a || b[0x7f] !== 0xa5) { setStatus("Geçersiz yedek dosyası.", "err"); return; }
+  run(async () => { await writeLed(b); led = await readLed(); render(); }, "Yedek geri yüklendi.");
+};
+
+navigator.hid?.addEventListener("disconnect", ev => {
+  if (ev.device === dev) { dev = null; $("controls").hidden = true;
+    $("connectBtn").disabled = false; $("connectBtn").textContent = "Klavyeye bağlan";
+    setStatus("Klavye çıkarıldı.", "err"); }
+});
+if (!("hid" in navigator)) setStatus("Bu tarayıcı WebHID desteklemiyor. Chrome, Edge ya da Opera kullan.", "err");
+</script>
+</body>
+</html>

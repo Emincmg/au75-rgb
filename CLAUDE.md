@@ -5,6 +5,7 @@ macOS command-line tool for the lighting of the AULA AU75 3-in-1 keyboard. AULA 
 ## Layout
 - `au75.py`: the whole tool (Python 3 + `hidapi`).
 - `au75`: shell launcher that runs `au75.py` with the local `.venv`.
+- `index.html`: WebHID web arayüzü (GitHub Pages: https://emincmg.github.io/au75-rgb/). Protokolün aynısı: `sendFeatureReport(6, ...)` / `receiveFeatureReport(6)`. Chrome bazı platformlarda dönen DataView'a report ID baytını ekliyor, kod uzunluğa bakıp bunu ayırt ediyor.
 - `led_backup.bin`: the 128-byte LED block read from the user's keyboard before the first write (factory-ish state, side light ON, mode 1). `./au75 restore` writes it back.
 
 Setup: `python3 -m venv .venv && .venv/bin/pip install hidapi`
@@ -35,7 +36,7 @@ Firmware update commands are deliberately NOT implemented. Don't add them.
 ## LED block (0x80 bytes)
 - `0x7e..0x7f` = `5a a5`, the validity marker. The tool refuses to write if a read doesn't end with it.
 - `0x0b` = current main effect (base + mode index).
-- `0x12` side light mode (0 = off, verified), `0x13` color index (0–6, 7 = rainbow), `0x14` brightness, `0x15` speed. Only "mode 0 = off" has been tested on hardware.
+- `0x12` side light mode (0 = off, verified), `0x13` color index (driver uses COLORREF/BGR: 0 red, 1 green, 2 blue, 3 yellow, 4 magenta, 5 cyan, 6 white, 7 rainbow), `0x14` brightness, `0x15` speed. Only "mode 0 = off" has been tested on hardware.
 - `0x38..0x39` = `ff ff`, then from `0x3a` there are 19 pairs `[speed][color<<4 | brightness]`, one per main effect (see `LedOpt*` in the driver's `KB.ini`).
 
 Always read-modify-write the whole block. Never build it from scratch.
